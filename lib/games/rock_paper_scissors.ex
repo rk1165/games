@@ -7,15 +7,20 @@ defmodule Games.RockPaperScissors do
   def play() do
     player_choice = IO.gets("Choose rock, paper, or scissors: ") |> String.trim()
     ai_choice = Enum.random(["rock", "paper", "scissors"])
+    wins = [{"rock", "scissors"}, {"paper", "rock"}, {"scissors", "paper"}]
 
     result =
-      case {player_choice, ai_choice} do
-        {"rock", "scissors"} -> "You win! rock beats scissors."
-        {"paper", "rock"} -> "You win! paper beats rock."
-        {"scissors", "paper"} -> "You win! scissors beats paper."
-        {player_choice, player_choice} -> "It's a tie!"
-        _ -> "You lose! #{ai_choice} beats #{player_choice}"
+      cond do
+        {player_choice, ai_choice} in wins ->
+          IO.ANSI.green() <> "You win! #{player_choice} beats #{ai_choice}."
+
+        {ai_choice, player_choice} in wins ->
+          IO.ANSI.red() <> "You lose! #{ai_choice} beats #{player_choice}"
+
+        true ->
+          IO.ANSI.yellow() <> "It's a tie"
       end
+
     IO.puts(result)
   end
 end

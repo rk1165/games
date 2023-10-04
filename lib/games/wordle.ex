@@ -5,82 +5,52 @@ defmodule Games.Wordle do
 
   @spec feedback(String.t(), String.t()) :: [atom()]
   def feedback(answer, guess) do
-    # result = [:grey, :grey, :grey, :grey, :grey]
     answer_list = String.split(answer, "", trim: true)
     guess_list = String.split(guess, "", trim: true)
-    answer_count = word_to_char_count(answer)
-    guess_count = word_to_char_count(guess)
+    answer_count = answer_list |> Enum.frequencies()
 
-    # IO.inspect(answer_count, label: "answer_count")
-    # IO.inspect(guess_count, label: "guess_count")
-
-    result =
-      Enum.map(Enum.zip(answer_list, guess_list), fn {answer_char, guess_char} ->
-        cond do
-          answer_char == guess_char ->
-            :green
-
-          true ->
-            :grey
-        end
-      end)
-
-    {final_answer_count, _final_guess_count} =
+    {result, updated_answer_count} =
       Enum.reduce(
         Enum.zip(answer_list, guess_list),
-        {answer_count, guess_count},
-        fn {answer_char, guess_char}, {answer_count, guess_count} = acc ->
+        {[], answer_count},
+        fn {answer_char, guess_char}, {list, answer_count} = _acc ->
           cond do
             answer_char == guess_char ->
-              {Map.update!(answer_count, answer_char, &(&1 - 1)),
-               Map.update!(guess_count, guess_char, &(&1 - 1))}
+              # add green to the list and reduce the answer char by 1
+              {[:green | list], Map.update!(answer_count, answer_char, &(&1 - 1))}
 
             true ->
-              acc
+              # otherwise add grey to the list and don't update answer_count
+              {[:grey | list], answer_count}
           end
         end
       )
 
-    # IO.inspect(final_answer_count, label: "final_answer_count")
-    # IO.inspect(final_guess_count, label: "final_guess_count")
-    # IO.inspect(result, label: "result")
+    result = Enum.reverse(result)
 
+    # to check if it's grey and needs to be updated to yellow
     {_, new_result, _} =
       Enum.reduce(
         guess_list,
-        {0, result, final_answer_count},
-        fn guess, {index, list, final_answer_count} = _acc ->
-          case Enum.at(list, index) do
-            :grey ->
-              cond do
-                Map.has_key?(final_answer_count, guess) and Map.get(final_answer_count, guess) > 0 ->
-                  # IO.inspect(guess, label: "guess")
+        {0, result, updated_answer_count},
+        fn guess, {index, result, updated_answer_count} = _acc ->
+          cond do
+            # if the value in result index is grey, check if answer has a key for guess and it's value > 0
+            # because it would mean that even though our guess doesn't match the answer at that index
+            # there is however guess present in answer. If we make it yellow
+            # we should also reduce the answer_count of that guess_char
+            Enum.at(result, index) == :grey and Map.has_key?(updated_answer_count, guess) and
+                Map.get(updated_answer_count, guess) > 0 ->
+              {index + 1, List.replace_at(result, index, :yellow),
+               Map.update!(updated_answer_count, guess, &(&1 - 1))}
 
-                  {index + 1, List.replace_at(list, index, :yellow),
-                   Map.update!(final_answer_count, guess, &(&1 - 1))}
-
-                true ->
-                  # IO.inspect(guess, label: "other guess")
-                  {index + 1, list, final_answer_count}
-              end
-
-            _ ->
-              {index + 1, list, final_answer_count}
+            true ->
+              {index + 1, result, updated_answer_count}
           end
         end
       )
 
-    # IO.puts(new_result)
     new_result
-  end
-
-  @spec word_to_char_count(String.t()) :: %{String.t() => integer()}
-  def word_to_char_count(word) do
-    split_string = String.split(word, "", trim: true)
-
-    Enum.reduce(split_string, %{}, fn char, map_accumulator ->
-      Map.update(map_accumulator, char, 1, fn current -> current + 1 end)
-    end)
   end
 
   @spec play :: :ok
