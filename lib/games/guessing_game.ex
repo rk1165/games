@@ -1,4 +1,8 @@
 defmodule Games.GuessingGame do
+  @moduledoc """
+  Guess the number game
+  """
+  @spec play :: :ok
   def play() do
     guess = IO.gets("Guess a number between 1 and 10: ") |> String.trim() |> String.to_integer()
     answer = Enum.random(1..10)
@@ -11,6 +15,7 @@ defmodule Games.GuessingGame do
     end
   end
 
+  @spec play_helper(String.t(), integer()) :: :ok
   def play_helper(answer, attempts) do
     guess = IO.gets("Enter your guess: ") |> String.trim() |> String.to_integer()
 

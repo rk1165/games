@@ -1,6 +1,9 @@
 defmodule Games.Wordle do
-  use ExUnit.Case
+  @moduledoc """
+  Play wordle on command line
+  """
 
+  @spec feedback(String.t(), String.t()) :: [atom()]
   def feedback(answer, guess) do
     # result = [:grey, :grey, :grey, :grey, :grey]
     answer_list = String.split(answer, "", trim: true)
@@ -71,6 +74,7 @@ defmodule Games.Wordle do
     new_result
   end
 
+  @spec word_to_char_count(String.t()) :: %{String.t() => integer()}
   def word_to_char_count(word) do
     split_string = String.split(word, "", trim: true)
 
@@ -79,12 +83,31 @@ defmodule Games.Wordle do
     end)
   end
 
+  @spec play :: :ok
   def play() do
-    answer = Enum.random(["toast", "tarts", "hello", "beats"])
+    answer =
+      Enum.random([
+        "toast",
+        "tarts",
+        "hello",
+        "beats",
+        "brain",
+        "adieu",
+        "chain",
+        "crime",
+        "cream",
+        "every",
+        "lunch",
+        "maybe",
+        "stuck",
+        "slope",
+        "faith"
+      ])
 
     play_helper(6, answer)
   end
 
+  @spec play_helper(integer(), String.t()) :: :ok
   def play_helper(attempts, answer) do
     guess = IO.gets(IO.ANSI.reset() <> "Enter a five letter word: ") |> String.trim()
     status = feedback(answer, guess)
@@ -107,7 +130,7 @@ defmodule Games.Wordle do
 
     cond do
       Enum.all?(status, fn elem -> elem == :green end) ->
-        IO.puts("You won!!!")
+        IO.puts(IO.ANSI.reset() <> "You won!!!")
 
       attempts == 0 ->
         IO.puts(IO.ANSI.red() <> "You lose! the answer was #{answer}")
