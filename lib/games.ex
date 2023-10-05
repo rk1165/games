@@ -39,7 +39,7 @@ defmodule Games do
 
   @spec prompt :: String.t()
   def prompt() do
-    IO.gets(IO.ANSI.reset() <> """
+    IO.gets("""
     \nWhat game would you like to play?
     1. Guessing Game
     2. Rock Paper Scissors

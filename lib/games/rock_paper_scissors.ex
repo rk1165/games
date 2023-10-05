@@ -12,13 +12,16 @@ defmodule Games.RockPaperScissors do
     result =
       cond do
         {player_choice, ai_choice} in wins ->
-          IO.ANSI.green() <> "You win! #{player_choice} beats #{ai_choice}."
+          IO.ANSI.green_background() <> "You win! #{player_choice} beats #{ai_choice}." <> IO.ANSI.reset()
 
         {ai_choice, player_choice} in wins ->
-          IO.ANSI.red() <> "You lose! #{ai_choice} beats #{player_choice}"
+          IO.ANSI.red_background() <> "You lose! #{ai_choice} beats #{player_choice}" <> IO.ANSI.reset()
+
+        ai_choice == player_choice ->
+          IO.ANSI.yellow_background() <> "It's a tie" <> IO.ANSI.reset()
 
         true ->
-          IO.ANSI.yellow() <> "It's a tie"
+          IO.ANSI.red_background() <> "That looks wrong. Please try again" <> IO.ANSI.reset()
       end
 
     IO.puts(result)

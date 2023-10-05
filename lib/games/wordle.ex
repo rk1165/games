@@ -55,59 +55,95 @@ defmodule Games.Wordle do
 
   @spec play :: :ok
   def play() do
-    answer =
-      Enum.random([
-        "toast",
-        "tarts",
-        "hello",
-        "beats",
-        "brain",
-        "adieu",
-        "chain",
-        "crime",
-        "cream",
-        "every",
-        "lunch",
-        "maybe",
-        "stuck",
-        "slope",
-        "faith"
-      ])
-
-    play_helper(6, answer)
+    play_helper(6, generate_answer(), initialize_letters())
   end
 
-  @spec play_helper(integer(), String.t()) :: :ok
-  def play_helper(attempts, answer) do
-    guess = IO.gets(IO.ANSI.reset() <> "Enter a five letter word: ") |> String.trim()
-    status = feedback(answer, guess)
+  def generate_answer() do
+    Enum.random([
+      "toast",
+      "tarts",
+      "hello",
+      "beats",
+      "brain",
+      "adieu",
+      "chain",
+      "crime",
+      "cream",
+      "every",
+      "lunch",
+      "maybe",
+      "stuck",
+      "slope",
+      "faith"
+    ])
+  end
 
+  @spec play_helper(integer(), String.t(), map()) :: :ok
+  def play_helper(attempts, answer, letter_map) do
+    guess = IO.gets("Enter a five letter word: ") |> String.trim()
+    feedback_list = feedback(answer, guess)
     guess_list = String.split(guess, "", trim: true)
 
-    guess_in_color =
-      Enum.map(
-        Enum.zip(status, guess_list),
-        fn {val, guess_char} ->
-          case val do
-            :green -> IO.ANSI.green() <> String.upcase(guess_char)
-            :yellow -> IO.ANSI.yellow() <> String.upcase(guess_char)
-            :grey -> IO.ANSI.light_black() <> String.upcase(guess_char)
-          end
-        end
-      )
+    {guess_in_color, updated_letter_map} =
+      check_and_update_map(feedback_list, guess_list, letter_map)
 
     IO.puts(guess_in_color)
+    IO.puts(render_letters(updated_letter_map))
 
     cond do
-      Enum.all?(status, fn elem -> elem == :green end) ->
-        IO.puts(IO.ANSI.reset() <> "You won!!!")
+      Enum.all?(feedback_list, fn elem -> elem == :green end) ->
+        IO.puts(IO.ANSI.green_background() <> "\nYou won!!!" <> IO.ANSI.reset())
 
       attempts == 0 ->
-        IO.puts(IO.ANSI.red() <> "You lose! the answer was #{answer}")
+        IO.puts(
+          IO.ANSI.red_background() <> "\nYou lose! the answer was #{answer}" <> IO.ANSI.reset()
+        )
 
       true ->
-        IO.ANSI.reset()
-        play_helper(attempts - 1, answer)
+        play_helper(attempts - 1, answer, updated_letter_map)
     end
   end
+
+  @spec check_and_update_map(list(), [String.t()], map()) :: {String.t(), map()}
+  def check_and_update_map(feedback_list, guess_list, letter_map) do
+    Enum.reduce(
+      Enum.zip(feedback_list, guess_list),
+      {"", letter_map},
+      fn {feedback, guess_char}, {result, letter_map} ->
+        {result <> format_letter(guess_char, feedback),
+         color_letter_in_map(letter_map, guess_char, feedback)}
+      end
+    )
+  end
+
+  @spec initialize_letters :: map()
+  def initialize_letters() do
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    |> String.split("", trim: true)
+    |> Enum.reduce(%{}, fn char, acc ->
+      Map.put(acc, char, IO.ANSI.black_background() <> char <> IO.ANSI.reset())
+    end)
+  end
+
+  @spec render_letters(map()) :: binary()
+  def render_letters(letter_map) do
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    |> String.split("", trim: true)
+    |> Enum.reduce("", fn letter, acc -> acc <> Map.get(letter_map, letter) end)
+  end
+
+  @spec color_letter_in_map(map, binary, :green | :grey | :yellow) :: map
+  def color_letter_in_map(letter_map, letter, color) do
+    %{letter_map | String.upcase(letter) => format_letter(letter, color)}
+  end
+
+  @spec format_letter(binary, :green | :grey | :yellow) :: binary
+  def format_letter(letter, :green),
+    do: IO.ANSI.green_background() <> String.upcase(letter) <> IO.ANSI.reset()
+
+  def format_letter(letter, :yellow),
+    do: IO.ANSI.yellow_background() <> String.upcase(letter) <> IO.ANSI.reset()
+
+  def format_letter(letter, :grey),
+    do: IO.ANSI.light_black_background() <> String.upcase(letter) <> IO.ANSI.reset()
 end

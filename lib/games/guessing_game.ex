@@ -17,17 +17,17 @@ defmodule Games.GuessingGame do
 
     cond do
       guess == answer ->
-        IO.puts(IO.ANSI.green() <> "Correct! You win!!!")
+        IO.puts(IO.ANSI.green_background() <> "Correct! You win!!!" <> IO.ANSI.reset())
 
       attempts == 0 ->
-        IO.puts(IO.ANSI.red() <> "You lose! the answer was #{answer}")
+        IO.puts(IO.ANSI.red_background() <> "You lose! the answer was #{answer}" <> IO.ANSI.reset())
 
       attempts > 0 and guess < answer ->
-        IO.puts(IO.ANSI.cyan() <> "Too Low!")
+        IO.puts(IO.ANSI.cyan_background() <> "Too Low!" <> IO.ANSI.reset())
         play_helper(answer, attempts - 1)
 
       attempts > 0 and guess > answer ->
-        IO.puts(IO.ANSI.magenta() <> "Too High!")
+        IO.puts(IO.ANSI.magenta_background() <> "Too High!" <> IO.ANSI.reset())
         play_helper(answer, attempts - 1)
     end
   end
