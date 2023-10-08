@@ -6,34 +6,41 @@ defmodule Games do
   alias Games.RockPaperScissors
   alias Games.GuessingGame
 
-  @spec main(any) :: :ok
+  @spec main(any) :: nil
   def main(_args) do
     play()
   end
 
-  @spec play :: :ok
+  @spec play :: nil
   def play() do
     choice = prompt()
 
     case choice do
       "1" ->
         GuessingGame.play()
-        play()
 
       "2" ->
         RockPaperScissors.play()
-        play()
 
       "3" ->
         Wordle.play()
-        play()
 
       "stop" ->
         IO.puts("Thanks for playing")
 
+      "score" ->
+        IO.puts("""
+        ==================================================
+          Your score is #{Games.ScoreTracker.current_score()}
+        ==================================================
+        """)
+
       _ ->
         IO.puts("We didn't understand that. Would you like to try again?")
-        play()
+    end
+
+    unless choice == "stop" do
+      play()
     end
   end
 
@@ -46,6 +53,7 @@ defmodule Games do
     3. Wordle
 
     enter "stop" to exit
+    enter "score" to view your current score
     """)
     |> String.trim()
   end

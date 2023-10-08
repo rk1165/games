@@ -9,21 +9,28 @@ defmodule Games.RockPaperScissors do
     ai_choice = Enum.random(["rock", "paper", "scissors"])
     wins = [{"rock", "scissors"}, {"paper", "rock"}, {"scissors", "paper"}]
 
-    result =
-      cond do
-        {player_choice, ai_choice} in wins ->
-          IO.ANSI.green_background() <> "You win! #{player_choice} beats #{ai_choice}." <> IO.ANSI.reset()
+    cond do
+      {player_choice, ai_choice} in wins ->
+        IO.puts(
+          IO.ANSI.green_background() <>
+            "You win! #{player_choice} beats #{ai_choice}." <> IO.ANSI.reset()
+        )
 
-        {ai_choice, player_choice} in wins ->
-          IO.ANSI.red_background() <> "You lose! #{ai_choice} beats #{player_choice}" <> IO.ANSI.reset()
+        Games.ScoreTracker.add_points(10)
 
-        ai_choice == player_choice ->
-          IO.ANSI.yellow_background() <> "It's a tie" <> IO.ANSI.reset()
+      {ai_choice, player_choice} in wins ->
+        IO.puts(
+          IO.ANSI.red_background() <>
+            "You lose! #{ai_choice} beats #{player_choice}" <> IO.ANSI.reset()
+        )
 
-        true ->
+      ai_choice == player_choice ->
+        IO.puts(IO.ANSI.yellow_background() <> "It's a tie" <> IO.ANSI.reset())
+
+      true ->
+        IO.puts(
           IO.ANSI.red_background() <> "That looks wrong. Please try again" <> IO.ANSI.reset()
-      end
-
-    IO.puts(result)
+        )
+    end
   end
 end

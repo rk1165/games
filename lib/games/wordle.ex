@@ -93,6 +93,7 @@ defmodule Games.Wordle do
     cond do
       Enum.all?(feedback_list, fn elem -> elem == :green end) ->
         IO.puts(IO.ANSI.green_background() <> "\nYou won!!!" <> IO.ANSI.reset())
+        Games.ScoreTracker.add_points(25)
 
       attempts == 0 ->
         IO.puts(

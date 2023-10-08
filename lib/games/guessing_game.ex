@@ -18,6 +18,7 @@ defmodule Games.GuessingGame do
     cond do
       guess == answer ->
         IO.puts(IO.ANSI.green_background() <> "Correct! You win!!!" <> IO.ANSI.reset())
+        Games.ScoreTracker.add_points(5)
 
       attempts == 0 ->
         IO.puts(IO.ANSI.red_background() <> "You lose! the answer was #{answer}" <> IO.ANSI.reset())
