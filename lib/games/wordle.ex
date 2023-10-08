@@ -1,7 +1,23 @@
 defmodule Games.Wordle do
+  use GenServer
+
+  @alphabet "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
   @moduledoc """
   Play wordle on command line
   """
+
+  def start() do
+    GenServer.start_link(__MODULE__, [], name: :wordle)
+  end
+
+  def current_score(pid) do
+    GenServer.call(pid, :current_score)
+  end
+
+  def play(pid) do
+    GenServer.call(pid, :play, 15000)
+  end
 
   @spec feedback(String.t(), String.t()) :: [atom()]
   def feedback(answer, guess) do
@@ -53,8 +69,8 @@ defmodule Games.Wordle do
     new_result
   end
 
-  @spec play :: :ok
-  def play() do
+  @spec play_wordle :: integer()
+  def play_wordle() do
     play_helper(6, generate_answer(), initialize_letters())
   end
 
@@ -78,7 +94,7 @@ defmodule Games.Wordle do
     ])
   end
 
-  @spec play_helper(integer(), String.t(), map()) :: :ok
+  @spec play_helper(integer(), String.t(), map()) :: integer()
   def play_helper(attempts, answer, letter_map) do
     guess = IO.gets("Enter a five letter word: ") |> String.trim()
     feedback_list = feedback(answer, guess)
@@ -93,11 +109,14 @@ defmodule Games.Wordle do
     cond do
       Enum.all?(feedback_list, fn elem -> elem == :green end) ->
         IO.puts(IO.ANSI.green_background() <> "\nYou won!!!" <> IO.ANSI.reset())
+        25
 
       attempts == 0 ->
         IO.puts(
           IO.ANSI.red_background() <> "\nYou lose! the answer was #{answer}" <> IO.ANSI.reset()
         )
+
+        0
 
       true ->
         play_helper(attempts - 1, answer, updated_letter_map)
@@ -118,7 +137,7 @@ defmodule Games.Wordle do
 
   @spec initialize_letters :: map()
   def initialize_letters() do
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    @alphabet
     |> String.split("", trim: true)
     |> Enum.reduce(%{}, fn char, acc ->
       Map.put(acc, char, IO.ANSI.black_background() <> char <> IO.ANSI.reset())
@@ -127,7 +146,7 @@ defmodule Games.Wordle do
 
   @spec render_letters(map()) :: binary()
   def render_letters(letter_map) do
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    @alphabet
     |> String.split("", trim: true)
     |> Enum.reduce("", fn letter, acc -> acc <> Map.get(letter_map, letter) end)
   end
@@ -138,12 +157,33 @@ defmodule Games.Wordle do
   end
 
   @spec format_letter(binary, :green | :grey | :yellow) :: binary
-  def format_letter(letter, :green),
-    do: IO.ANSI.green_background() <> String.upcase(letter) <> IO.ANSI.reset()
+  def format_letter(letter, color) do
+    upcase = String.upcase(letter)
 
-  def format_letter(letter, :yellow),
-    do: IO.ANSI.yellow_background() <> String.upcase(letter) <> IO.ANSI.reset()
+    case color do
+      :green ->
+        IO.ANSI.green_background() <> upcase <> IO.ANSI.reset()
 
-  def format_letter(letter, :grey),
-    do: IO.ANSI.light_black_background() <> String.upcase(letter) <> IO.ANSI.reset()
+      :yellow ->
+        IO.ANSI.yellow_background() <> upcase <> IO.ANSI.reset()
+
+      :grey ->
+        IO.ANSI.light_black_background() <> upcase <> IO.ANSI.reset()
+    end
+  end
+
+  def init(_init_arg) do
+    {:ok, 0}
+  end
+
+  def handle_call(:current_score, _from, score) do
+    {:reply, score, score}
+  end
+
+  def handle_call(:play, _from, score) do
+    updated_score = score + play_wordle()
+    {:reply, updated_score, updated_score}
+  end
 end
+
+# in 15s this game needs to be played instead of waiting for answer indefinitely or for each guess
