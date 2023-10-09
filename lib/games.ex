@@ -18,25 +18,25 @@ defmodule Games do
 
     case choice do
       "1" ->
-        {:ok, pid} = GuessingGame.start()
-        GuessingGame.play(pid)
+        GuessingGame.play(:guessing_game)
         play()
 
       "2" ->
-        {:ok, pid} = RockPaperScissors.start()
-        RockPaperScissors.play(pid)
+        RockPaperScissors.play(:rock_paper_scissors)
         play()
 
       "3" ->
-        {:ok, pid} = Wordle.start()
-        RockPaperScissors.play(pid)
+        Wordle.play(:wordle)
         play()
 
       "stop" ->
         IO.puts("Thanks for playing")
 
       "score" ->
-        ScoreTracker.current_score(__MODULE__)
+        IO.puts("==================================================")
+        ScoreTracker.current_score(:score_tracker) |> IO.inspect()
+        IO.puts("==================================================")
+        play()
 
       _ ->
         IO.puts("We didn't understand that. Would you like to try again?")

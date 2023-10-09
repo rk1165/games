@@ -4,8 +4,9 @@ defmodule Games.GuessingGame do
   @moduledoc """
   Guess the number game
   """
+  alias Games.ScoreTracker
 
-  def start() do
+  def start_link(_init) do
     GenServer.start_link(__MODULE__, [], name: :guessing_game)
   end
 
@@ -15,7 +16,7 @@ defmodule Games.GuessingGame do
 
   def play(pid) do
     # waiting 15s for answer
-    GenServer.call(pid, :guess, 15000)
+    GenServer.call(pid, :guess, :infinity)
   end
 
   @spec play_helper(String.t(), integer()) :: integer()
@@ -28,10 +29,14 @@ defmodule Games.GuessingGame do
     cond do
       guess == answer ->
         IO.puts(IO.ANSI.green_background() <> "Correct! You win!!!" <> IO.ANSI.reset())
+        ScoreTracker.add_points(:score_tracker, :guessing_game, 5)
         5
 
       attempts == 0 ->
-        IO.puts(IO.ANSI.red_background() <> "You lose! the answer was #{answer}" <> IO.ANSI.reset())
+        IO.puts(
+          IO.ANSI.red_background() <> "You lose! the answer was #{answer}" <> IO.ANSI.reset()
+        )
+
         0
 
       attempts > 0 and guess < answer ->

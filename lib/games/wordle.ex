@@ -6,8 +6,9 @@ defmodule Games.Wordle do
   @moduledoc """
   Play wordle on command line
   """
+  alias Games.ScoreTracker
 
-  def start() do
+  def start_link(_init) do
     GenServer.start_link(__MODULE__, [], name: :wordle)
   end
 
@@ -16,7 +17,7 @@ defmodule Games.Wordle do
   end
 
   def play(pid) do
-    GenServer.call(pid, :play, 15000)
+    GenServer.call(pid, :play, :infinity)
   end
 
   @spec feedback(String.t(), String.t()) :: [atom()]
@@ -109,6 +110,7 @@ defmodule Games.Wordle do
     cond do
       Enum.all?(feedback_list, fn elem -> elem == :green end) ->
         IO.puts(IO.ANSI.green_background() <> "\nYou won!!!" <> IO.ANSI.reset())
+        ScoreTracker.add_points(:score_tracker, :wordle, 25)
         25
 
       attempts == 0 ->
@@ -185,5 +187,3 @@ defmodule Games.Wordle do
     {:reply, updated_score, updated_score}
   end
 end
-
-# in 15s this game needs to be played instead of waiting for answer indefinitely or for each guess

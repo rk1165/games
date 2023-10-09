@@ -5,7 +5,8 @@ defmodule Games.Application do
     children = [
       {Games.GuessingGame, []},
       {Games.RockPaperScissors, []},
-      {Games.Wordle, []}
+      {Games.Wordle, []},
+      {Games.ScoreTracker, []}
     ]
 
     opts = [strategy: :one_for_one, name: Games.Supervisor]

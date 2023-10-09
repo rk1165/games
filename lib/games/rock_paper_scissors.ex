@@ -4,8 +4,9 @@ defmodule Games.RockPaperScissors do
   @moduledoc """
   Rock, Paper, Scissors game
   """
+  alias Games.ScoreTracker
 
-  def start() do
+  def start_link(_init) do
     GenServer.start_link(__MODULE__, [], name: :rock_paper_scissors)
   end
 
@@ -14,19 +15,19 @@ defmodule Games.RockPaperScissors do
   end
 
   def play(pid) do
-    # waiting 15s for answer
-    GenServer.call(pid, :play, 15000)
+    ai_choice = Enum.random(["rock", "paper", "scissors"])
+    player_choice = IO.gets("Choose rock, paper, or scissors: ") |> String.trim()
+    GenServer.call(pid, {:play, ai_choice, player_choice})
   end
 
-  @spec rps :: integer()
-  def rps() do
-    player_choice = IO.gets("Choose rock, paper, or scissors: ") |> String.trim()
-    ai_choice = Enum.random(["rock", "paper", "scissors"])
+  def beats?(player_choice, ai_choice) do
     wins = [{"rock", "scissors"}, {"paper", "rock"}, {"scissors", "paper"}]
 
     {result, score} =
       cond do
         {player_choice, ai_choice} in wins ->
+          ScoreTracker.add_points(:score_tracker, :rock_paper_scissors, 10)
+
           {IO.ANSI.green_background() <>
              "You win! #{player_choice} beats #{ai_choice}." <> IO.ANSI.reset(), 10}
 
@@ -53,8 +54,8 @@ defmodule Games.RockPaperScissors do
     {:reply, score, score}
   end
 
-  def handle_call(:play, _from, score) do
-    updated_score = score + rps()
+  def handle_call({:play, ai_choice, player_choice}, _from, score) do
+    updated_score = score + beats?(player_choice, ai_choice)
     {:reply, updated_score, updated_score}
   end
 end
