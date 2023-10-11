@@ -2,46 +2,71 @@ defmodule Games do
   @moduledoc """
   Documentation for `Games`.
   """
-  alias Games.ScoreTracker
+  alias Games.GameServer
   alias Games.Wordle
   alias Games.RockPaperScissors
   alias Games.GuessingGame
 
   @spec main(any) :: :ok
   def main(_args) do
-    play()
+    id = register()
+    play(id)
   end
 
-  @spec play :: :ok
-  def play() do
+  @spec play(String.t()) :: :ok
+  def play(id) do
+    # what if the id exists
     choice = prompt()
 
     case choice do
       "1" ->
-        GuessingGame.play(:guessing_game)
-        play()
+        game = Task.async(fn -> GuessingGame.play(id) end)
+        {_status, message} = Task.await(game, 3 * 60 * 1000)
+        IO.puts(message)
+        play(id)
 
       "2" ->
-        RockPaperScissors.play(:rock_paper_scissors)
-        play()
+        game = Task.async(fn -> RockPaperScissors.play(id) end)
+        {_status, message} = Task.await(game, 1 * 60 * 1000)
+        IO.puts(message)
+        play(id)
 
       "3" ->
-        Wordle.play(:wordle)
-        play()
+        game = Task.async(fn -> Wordle.play(id) end)
+        {_status, message} = Task.await(game, :infinity)
+        IO.puts(message)
+        play(id)
 
       "stop" ->
+        # save player in DB??
         IO.puts("Thanks for playing")
 
       "score" ->
         IO.puts("==================================================")
-        ScoreTracker.current_score(:score_tracker) |> IO.inspect()
+        GameServer.current_score(:game_server, id) |> IO.inspect()
         IO.puts("==================================================")
-        play()
+        play(id)
 
       _ ->
         IO.puts("We didn't understand that. Would you like to try again?")
-        play()
+        play(id)
     end
+  end
+
+  def register() do
+    IO.puts("Please register yourself before playing a game.")
+
+    # handle check if ID is already existing
+    id =
+      IO.gets("""
+      \nEnter a unique id for yourself
+      """)
+      |> String.trim()
+
+    GameServer.register(:game_server, id)
+
+    IO.puts("You have registered successfully!!!")
+    id
   end
 
   @spec prompt :: String.t()

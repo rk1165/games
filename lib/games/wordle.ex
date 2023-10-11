@@ -1,24 +1,10 @@
 defmodule Games.Wordle do
-  use GenServer
-
   @alphabet "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
   @moduledoc """
   Play wordle on command line
   """
-  alias Games.ScoreTracker
-
-  def start_link(_init) do
-    GenServer.start_link(__MODULE__, [], name: :wordle)
-  end
-
-  def current_score(pid) do
-    GenServer.call(pid, :current_score)
-  end
-
-  def play(pid) do
-    GenServer.call(pid, :play, :infinity)
-  end
+  alias Games.GameServer
 
   @spec feedback(String.t(), String.t()) :: [atom()]
   def feedback(answer, guess) do
@@ -70,11 +56,6 @@ defmodule Games.Wordle do
     new_result
   end
 
-  @spec play_wordle :: integer()
-  def play_wordle() do
-    play_helper(6, generate_answer(), initialize_letters())
-  end
-
   def generate_answer() do
     Enum.random([
       "toast",
@@ -95,8 +76,13 @@ defmodule Games.Wordle do
     ])
   end
 
-  @spec play_helper(integer(), String.t(), map()) :: integer()
-  def play_helper(attempts, answer, letter_map) do
+  @spec play(String.t()) :: {:ok | :notok, String.t()}
+  def play(id) do
+    play_helper(id, 6, generate_answer(), initialize_letters())
+  end
+
+  @spec play_helper(String.t(), integer(), String.t(), map()) :: {:ok | :notok, String.t()}
+  def play_helper(id, attempts, answer, letter_map) do
     guess = IO.gets("Enter a five letter word: ") |> String.trim()
     feedback_list = feedback(answer, guess)
     guess_list = String.split(guess, "", trim: true)
@@ -109,19 +95,15 @@ defmodule Games.Wordle do
 
     cond do
       Enum.all?(feedback_list, fn elem -> elem == :green end) ->
-        IO.puts(IO.ANSI.green_background() <> "\nYou won!!!" <> IO.ANSI.reset())
-        ScoreTracker.add_points(:score_tracker, :wordle, 25)
-        25
+        GameServer.add_points(:game_server, id, :wordle, 25)
+        {:ok, IO.ANSI.green_background() <> "You won!!!" <> IO.ANSI.reset()}
 
       attempts == 0 ->
-        IO.puts(
-          IO.ANSI.red_background() <> "\nYou lose! the answer was #{answer}" <> IO.ANSI.reset()
-        )
-
-        0
+        {:notok,
+         IO.ANSI.red_background() <> "\nYou lose! the answer was #{answer}" <> IO.ANSI.reset()}
 
       true ->
-        play_helper(attempts - 1, answer, updated_letter_map)
+        play_helper(id, attempts - 1, answer, updated_letter_map)
     end
   end
 
@@ -172,18 +154,5 @@ defmodule Games.Wordle do
       :grey ->
         IO.ANSI.light_black_background() <> upcase <> IO.ANSI.reset()
     end
-  end
-
-  def init(_init_arg) do
-    {:ok, 0}
-  end
-
-  def handle_call(:current_score, _from, score) do
-    {:reply, score, score}
-  end
-
-  def handle_call(:play, _from, score) do
-    updated_score = score + play_wordle()
-    {:reply, updated_score, updated_score}
   end
 end

@@ -3,10 +3,7 @@ defmodule Games.Application do
 
   def start(_start_type, _start_args) do
     children = [
-      {Games.GuessingGame, []},
-      {Games.RockPaperScissors, []},
-      {Games.Wordle, []},
-      {Games.ScoreTracker, []}
+      {Games.GameServer, []}
     ]
 
     opts = [strategy: :one_for_one, name: Games.Supervisor]
