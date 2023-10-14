@@ -1,6 +1,7 @@
 defmodule Games.GameServer do
   alias Games.Player
   use GenServer
+  require Logger
 
   def start_link(_init) do
     GenServer.start_link(__MODULE__, [], name: :game_server)
@@ -34,6 +35,7 @@ defmodule Games.GameServer do
   def handle_call({:register, id}, _from, state) do
     player = %Player{id: id}
     new_state = Map.put_new(state, id, player)
+    Logger.info("Registered user with id #{id}")
     {:reply, :ok, new_state}
   end
 
@@ -51,13 +53,13 @@ defmodule Games.GameServer do
   end
 
   def handle_cast({:add_points, id, game, points}, state) do
-    IO.inspect(state, label: "previous_state")
+    # IO.inspect(state, label: "previous_state")
     player = Map.get(state, id)
     scores = player.scores
     updated_score = Map.update!(scores, game, fn curr -> curr + points end)
     updated_player = %Player{player | scores: updated_score}
     updated_state = %{state | id => updated_player}
-    IO.inspect(updated_state, label: "updated_state")
+    # IO.inspect(updated_state, label: "updated_state")
     {:noreply, updated_state}
   end
 end

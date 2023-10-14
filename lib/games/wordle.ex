@@ -4,7 +4,54 @@ defmodule Games.Wordle do
   @moduledoc """
   Play wordle on command line
   """
+  require Logger
   alias Games.GameServer
+  alias Games.HttpServer
+
+  @spec play(any(), port()) :: :ok
+  def play(id, client_socket) do
+    Logger.info("id #{id} playing Wordle")
+    play_helper(id, client_socket, 6, generate_answer(), initialize_letters())
+  end
+
+  @spec play_helper(String.t(), port(), integer(), String.t(), map()) :: :ok
+  def play_helper(id, client_socket, attempts, answer, letter_map) do
+    HttpServer.write_response("Enter a five letter word: ", client_socket)
+    guess = HttpServer.read_request(client_socket) |> String.trim()
+
+    feedback_list = feedback(answer, guess)
+    guess_list = String.split(guess, "", trim: true)
+
+    {guess_in_color, updated_letter_map} =
+      check_and_update_map(feedback_list, guess_list, letter_map)
+
+    HttpServer.write_response(guess_in_color <> "\n", client_socket)
+    HttpServer.write_response(render_letters(updated_letter_map) <> "\n", client_socket)
+
+    cond do
+      Enum.all?(feedback_list, fn elem -> elem == :green end) ->
+        GameServer.add_points(:game_server, id, :wordle, 25)
+        Logger.info("#{id} won Wordle")
+
+        HttpServer.write_response(
+          IO.ANSI.green_background() <> "You won!!!" <> IO.ANSI.reset() <> "\n",
+          client_socket
+        )
+
+      attempts == 0 ->
+        Logger.info("#{id} lost Wordle")
+
+        HttpServer.write_response(
+          "\n" <>
+            IO.ANSI.red_background() <>
+            "You lose! the answer was #{answer}" <> IO.ANSI.reset() <> "\n",
+          client_socket
+        )
+
+      true ->
+        play_helper(id, client_socket, attempts - 1, answer, updated_letter_map)
+    end
+  end
 
   @spec feedback(String.t(), String.t()) :: [atom()]
   def feedback(answer, guess) do
@@ -56,6 +103,7 @@ defmodule Games.Wordle do
     new_result
   end
 
+  @spec generate_answer() :: String.t()
   def generate_answer() do
     Enum.random([
       "toast",
@@ -74,37 +122,6 @@ defmodule Games.Wordle do
       "slope",
       "faith"
     ])
-  end
-
-  @spec play(String.t()) :: {:ok | :notok, String.t()}
-  def play(id) do
-    play_helper(id, 6, generate_answer(), initialize_letters())
-  end
-
-  @spec play_helper(String.t(), integer(), String.t(), map()) :: {:ok | :notok, String.t()}
-  def play_helper(id, attempts, answer, letter_map) do
-    guess = IO.gets("Enter a five letter word: ") |> String.trim()
-    feedback_list = feedback(answer, guess)
-    guess_list = String.split(guess, "", trim: true)
-
-    {guess_in_color, updated_letter_map} =
-      check_and_update_map(feedback_list, guess_list, letter_map)
-
-    IO.puts(guess_in_color)
-    IO.puts(render_letters(updated_letter_map))
-
-    cond do
-      Enum.all?(feedback_list, fn elem -> elem == :green end) ->
-        GameServer.add_points(:game_server, id, :wordle, 25)
-        {:ok, IO.ANSI.green_background() <> "You won!!!" <> IO.ANSI.reset()}
-
-      attempts == 0 ->
-        {:notok,
-         IO.ANSI.red_background() <> "\nYou lose! the answer was #{answer}" <> IO.ANSI.reset()}
-
-      true ->
-        play_helper(id, attempts - 1, answer, updated_letter_map)
-    end
   end
 
   @spec check_and_update_map(list(), [String.t()], map()) :: {String.t(), map()}
