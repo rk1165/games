@@ -1,7 +1,57 @@
 defmodule Games.Wordle do
+  @alphabet "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
   @moduledoc """
   Play wordle on command line
   """
+  require Logger
+  alias Games.GameServer
+  alias Games.HttpServer
+
+  @spec play(any(), port()) :: :ok
+  def play(id, client_socket) do
+    Logger.info("id #{id} playing Wordle")
+    play_helper(id, client_socket, 6, generate_answer(), initialize_letters())
+  end
+
+  @spec play_helper(String.t(), port(), integer(), String.t(), map()) :: :ok
+  def play_helper(id, client_socket, attempts, answer, letter_map) do
+    HttpServer.write_response("Enter a five letter word: ", client_socket)
+    guess = HttpServer.read_request(client_socket) |> String.trim()
+
+    feedback_list = feedback(answer, guess)
+    guess_list = String.split(guess, "", trim: true)
+
+    {guess_in_color, updated_letter_map} =
+      check_and_update_map(feedback_list, guess_list, letter_map)
+
+    HttpServer.write_response(guess_in_color <> "\n", client_socket)
+    HttpServer.write_response(render_letters(updated_letter_map) <> "\n", client_socket)
+
+    cond do
+      Enum.all?(feedback_list, fn elem -> elem == :green end) ->
+        GameServer.add_points(:game_server, id, :wordle, 25)
+        Logger.info("#{id} won Wordle")
+
+        HttpServer.write_response(
+          IO.ANSI.green_background() <> "You won!!!" <> IO.ANSI.reset() <> "\n",
+          client_socket
+        )
+
+      attempts == 0 ->
+        Logger.info("#{id} lost Wordle")
+
+        HttpServer.write_response(
+          "\n" <>
+            IO.ANSI.red_background() <>
+            "You lose! the answer was #{answer}" <> IO.ANSI.reset() <> "\n",
+          client_socket
+        )
+
+      true ->
+        play_helper(id, client_socket, attempts - 1, answer, updated_letter_map)
+    end
+  end
 
   @spec feedback(String.t(), String.t()) :: [atom()]
   def feedback(answer, guess) do
@@ -53,11 +103,7 @@ defmodule Games.Wordle do
     new_result
   end
 
-  @spec play :: :ok
-  def play() do
-    play_helper(6, generate_answer(), initialize_letters())
-  end
-
+  @spec generate_answer() :: String.t()
   def generate_answer() do
     Enum.random([
       "toast",
@@ -78,33 +124,6 @@ defmodule Games.Wordle do
     ])
   end
 
-  @spec play_helper(integer(), String.t(), map()) :: :ok
-  def play_helper(attempts, answer, letter_map) do
-    guess = IO.gets("Enter a five letter word: ") |> String.trim()
-    feedback_list = feedback(answer, guess)
-    guess_list = String.split(guess, "", trim: true)
-
-    {guess_in_color, updated_letter_map} =
-      check_and_update_map(feedback_list, guess_list, letter_map)
-
-    IO.puts(guess_in_color)
-    IO.puts(render_letters(updated_letter_map))
-
-    cond do
-      Enum.all?(feedback_list, fn elem -> elem == :green end) ->
-        IO.puts(IO.ANSI.green_background() <> "\nYou won!!!" <> IO.ANSI.reset())
-        Games.ScoreTracker.add_points(25)
-
-      attempts == 0 ->
-        IO.puts(
-          IO.ANSI.red_background() <> "\nYou lose! the answer was #{answer}" <> IO.ANSI.reset()
-        )
-
-      true ->
-        play_helper(attempts - 1, answer, updated_letter_map)
-    end
-  end
-
   @spec check_and_update_map(list(), [String.t()], map()) :: {String.t(), map()}
   def check_and_update_map(feedback_list, guess_list, letter_map) do
     Enum.reduce(
@@ -119,7 +138,7 @@ defmodule Games.Wordle do
 
   @spec initialize_letters :: map()
   def initialize_letters() do
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    @alphabet
     |> String.split("", trim: true)
     |> Enum.reduce(%{}, fn char, acc ->
       Map.put(acc, char, IO.ANSI.black_background() <> char <> IO.ANSI.reset())
@@ -128,7 +147,7 @@ defmodule Games.Wordle do
 
   @spec render_letters(map()) :: binary()
   def render_letters(letter_map) do
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    @alphabet
     |> String.split("", trim: true)
     |> Enum.reduce("", fn letter, acc -> acc <> Map.get(letter_map, letter) end)
   end
@@ -139,12 +158,18 @@ defmodule Games.Wordle do
   end
 
   @spec format_letter(binary, :green | :grey | :yellow) :: binary
-  def format_letter(letter, :green),
-    do: IO.ANSI.green_background() <> String.upcase(letter) <> IO.ANSI.reset()
+  def format_letter(letter, color) do
+    upcase = String.upcase(letter)
 
-  def format_letter(letter, :yellow),
-    do: IO.ANSI.yellow_background() <> String.upcase(letter) <> IO.ANSI.reset()
+    case color do
+      :green ->
+        IO.ANSI.green_background() <> upcase <> IO.ANSI.reset()
 
-  def format_letter(letter, :grey),
-    do: IO.ANSI.light_black_background() <> String.upcase(letter) <> IO.ANSI.reset()
+      :yellow ->
+        IO.ANSI.yellow_background() <> upcase <> IO.ANSI.reset()
+
+      :grey ->
+        IO.ANSI.light_black_background() <> upcase <> IO.ANSI.reset()
+    end
+  end
 end

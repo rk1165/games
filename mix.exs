@@ -8,14 +8,14 @@ defmodule Games.MixProject do
       elixir: "~> 1.15",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      escript: [main_module: Games]
+      escript: [main_module: Games.HttpServer]
     ]
   end
 
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      extra_applications: [:logger],
+      extra_applications: [:logger, :observer, :wx, :runtime_tools],
       mod: {Games.Application, []}
     ]
   end
